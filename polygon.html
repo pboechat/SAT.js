@@ -1,0 +1,223 @@
+<html>
+<head>
+<script src="two.min.js"></script>
+<script src="stacktrace.js"></script>
+<script src="System.js"></script>
+<script>
+    var SCREEN_WIDTH = 600;
+    var SCREEN_HEIGHT = 600;
+    var TEMPORARY_POINT_RADIUS = 5;
+    var ARROW_LENGTH = 75;
+    var ARROW_WIDTH = 1;
+
+    var two;
+    var svg;
+    var vertexIndex = 0;
+    var lineObjects = [];
+    var temporaryPoints = [];
+    var polygonObjects = [];
+
+    TemporaryPoint = Object.SubClass();
+
+    TemporaryPoint.prototype.__Constructor = function (x, y, circleObject) {
+        this.x = x;
+        this.y = y;
+        this.__circleObject = circleObject;
+    };
+
+    TemporaryPoint.prototype.GetCircleObject = function () {
+        return this.__circleObject;
+    };
+
+    CounterClockwiseSorter = Object.SubClass();
+
+    CounterClockwiseSorter.prototype.__Constructor = function (vertices) {
+        var verticesClone = vertices.slice(0);
+        verticesClone.sort(function (a, b) {
+            if (a.y < b.y) {
+                return b.y - a.y;
+            }
+            else {
+                return a.x - b.x;
+            }
+        });
+        this.__anchor = verticesClone[0];
+        this.__vertices = vertices;
+    };
+
+    CounterClockwiseSorter.prototype.GetAngleToAnchor = function (point) {
+        return Math.atan2(point.y - this.__anchor.y, point.x - this.__anchor.x) * 180.0 / Math.PI;
+    };
+
+    CounterClockwiseSorter.prototype.Sort = function () {
+        this.__vertices.sort(function (a, b) {
+            return this.GetAngleToAnchor(b) - this.GetAngleToAnchor(a);
+        }.bind(this));
+    };
+
+    function OnCreateLineObject(lineObject) {
+        lineObjects.push(lineObject);
+    }
+
+    function CreateArrow(start, end, color, width, callback) {
+        var lineObject = two.makeLine(start.x, start.y, end.x, end.y);
+        lineObject.stroke = color;
+        lineObject.linewidth = width;
+        callback(lineObject);
+    }
+
+    function Play() {
+        if (polygonObjects.length < 2) {
+            return;
+        }
+
+        var polygonObject0, polygonObject1;
+        var actualVertexIndex;
+        if (vertexIndex < polygonObjects[0].vertices.length) {
+            actualVertexIndex = vertexIndex;
+            polygonObject0 = polygonObjects[0];
+            polygonObject1 = polygonObjects[1];
+        }
+        else {
+            actualVertexIndex = vertexIndex - polygonObjects[0].vertices.length;
+            polygonObject0 = polygonObjects[1];
+            polygonObject1 = polygonObjects[0];
+        }
+        var i0 = (actualVertexIndex == 0) ? polygonObject0.vertices.length - 1 : actualVertexIndex - 1;
+        var i1 = actualVertexIndex;
+        var p0 = new Two.Vector().add(polygonObject0.translation, polygonObject0.vertices[i0]);
+        var p1 = new Two.Vector().add(polygonObject0.translation, polygonObject0.vertices[i1]);
+
+        var edge = new Two.Vector().sub(p1, p0);
+        var perpendicularStart = new Two.Vector().add(p0, new Two.Vector(edge.x * 0.5, edge.y * 0.5));
+        var perpendicular = new Two.Vector(-edge.y, edge.x);
+        perpendicular.setLength(ARROW_LENGTH);
+        var perpendicularEnd = new Two.Vector().add(perpendicular, perpendicularStart);
+        for (var i = 0; i < lineObjects.length; i++) {
+            two.remove(lineObjects[i]);
+        }
+        lineObjects = [];
+        var perpendicularLine = two.makeLine(perpendicularStart.x, perpendicularStart.y, perpendicularEnd.x, perpendicularEnd.y);
+        perpendicularLine.stroke = "#000000";
+        perpendicularLine.linewidth = ARROW_WIDTH;
+        lineObjects.push(perpendicularLine);
+        for (var i = 0; i < polygonObject1.vertices.length; i++) {
+            var p2 = new Two.Vector().add(polygonObject1.translation, polygonObject1.vertices[i]);
+            var line = new Two.Vector().sub(p2, p0);
+            line.setLength(ARROW_LENGTH);
+            var lineEnd = new Two.Vector().add(p0, line);
+            CreateArrow(p0, lineEnd, (perpendicular.dot(line) > 0) ? "#0000FF" : "#FF0000", ARROW_WIDTH, OnCreateLineObject);
+        }
+        vertexIndex = ++vertexIndex % (polygonObjects[0].vertices.length + polygonObjects[1].vertices.length);
+        two.update();
+    }
+
+    function GetRandomColor() {
+        var letters = '0123456789ABCDEF'.split('');
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+
+    function UpdateButton_OnClick(e) {
+        if (temporaryPoints.length < 3) {
+            alert("Cannot create polygon with less than 3 points.");
+            return;
+        }
+
+        var vertices = [];
+        for (var i = 0; i < temporaryPoints.length; i++) {
+            var temporaryPoint = temporaryPoints[i];
+            vertices.push(new Two.Anchor(temporaryPoint.x, temporaryPoint.y));
+            two.remove(temporaryPoint.GetCircleObject());
+        }
+        var sorter = new CounterClockwiseSorter(vertices);
+        sorter.Sort();
+        temporaryPoints = [];
+
+        var polygonObject = two.makePolygon(vertices);
+        polygonObject.fill = GetRandomColor();
+        polygonObject.linewidth = 0;
+        polygonObjects.push(polygonObject);
+
+        two.update();
+
+        if (polygonObjects.length > 1) {
+            document.getElementById("updateButton").disabled = true;
+        }
+        document.getElementById("clearButton").disabled = false;
+    }
+
+    function ClearButton_OnClick(e) {
+        two.clear();
+        two.update();
+
+        temporaryPoints = [];
+        polygonObjects = [];
+        lineObjects = [];
+
+        document.getElementById("updateButton").disabled = false;
+    }
+
+    function AddTemporaryPoint(x, y) {
+        temporaryPoints.push(new TemporaryPoint(x, y, two.makeCircle(x, y, TEMPORARY_POINT_RADIUS)));
+        two.update();
+    }
+
+    function SVG_OnClick(e) {
+        if (polygonObjects.length > 1) {
+            return;
+        }
+
+        var x;
+        var y;
+        if (e.pageX || e.pageY) {
+            x = e.pageX;
+            y = e.pageY;
+        }
+        else {
+            x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+            y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+        }
+        x -= svg.offsetLeft;
+        y -= svg.offsetTop;
+
+        AddTemporaryPoint(x, y);
+    }
+
+    window.onload = function () {
+        var body = document.getElementsByTagName("body")[0];
+        body.onkeyup = function (e) {
+            var clickEvent = e || event;
+            if (clickEvent.keyCode == 13) // space
+            {
+                Play();
+            }
+        };
+
+        var parent = document.getElementById("parent");
+        var canvas = parent.children[0];
+        canvas.width = SCREEN_WIDTH;
+        canvas.height = SCREEN_HEIGHT;
+        two = new Two({ width: SCREEN_WIDTH, height: SCREEN_HEIGHT }).appendTo(parent);
+        svg = parent.children[1];
+        svg.onclick = SVG_OnClick;
+        svg.style.border = "solid 1px #000000";
+
+        document.getElementById("updateButton").onclick = UpdateButton_OnClick;
+        document.getElementById("clearButton").onclick = ClearButton_OnClick;
+        document.getElementById("clearButton").disabled = true;
+    };
+
+</script>
+</head>
+<body>
+<div id="parent">
+    <canvas id="canvas" style="display: none"></canvas>
+</div>
+<input id="updateButton" type="button" value="Update"/><br>
+<input id="clearButton" type="button" value="Clear"/>
+</body>
+</html>
