@@ -1,8 +1,4 @@
 // --------------------------------------------------
-//                  BASE SYSTEM
-// --------------------------------------------------
-
-// --------------------------------------------------
 //              INHERITANCE MECHANISM
 // --------------------------------------------------
 
@@ -29,20 +25,7 @@ Function.prototype.SubClass = function()
 Function.prototype.SubClass.NonConstructor = function() {};
 
 // --------------------------------------------------
-/*Object.prototype.toString = function()
-{
-    if (this.ToString)
-    {
-        return this.ToString();
-    }
-    else
-    {
-        return "[object Function]";
-    }
-};*/
-
-// --------------------------------------------------
-//                  SYSTEM OBJECT
+//                  SYSTEM NAMESPACE
 // --------------------------------------------------
 System = function() {};
 
@@ -118,47 +101,69 @@ System.Now = function()
 };
 
 // --------------------------------------------------
-//              UNIT TEST FRAMEWORK (MOCK)
+//                  OBJECT CLASS
 // --------------------------------------------------
 
-UnitTest = function() {};
+System.Object = function() {};
 
-UnitTest.AddTestCase = function(testCase) {};
+System.Object.prototype.toString = function()
+{
+    if (this.ToString)
+    {
+        return this.ToString();
+    }
+    else
+    {
+        return "[object Object]";
+    }
+};
 
 // --------------------------------------------------
-//                  MATH EXTENSIONS
+//              UNIT TEST NAMESPACE
 // --------------------------------------------------
 
-Math.AP = function(n)
+System.UnitTest = function() {};
+
+System.UnitTest.AddTestCase = function(testCase) {};
+
+// --------------------------------------------------
+//                  MATH NAMESPACE
+// --------------------------------------------------
+
+System.Math = function() {};
+
+System.Math.AP = function(n)
 {
     return n * (1.0 + n) / 2.0;
 };
 
-// --------------------------------------------------
-//                      Type
-// --------------------------------------------------
-Type = function() {};
+System.Math.Sign = function(x) { return (x >= 0) ? 1 : -1; };
 
 // --------------------------------------------------
-Type.IsUndefined = function(a)
+//                  TYPE NAMESPACE
+// --------------------------------------------------
+System.Type = function() {};
+
+// --------------------------------------------------
+System.Type.IsUndefined = function(a)
 {
     return (typeof a === "undefined");
 };
 
 // --------------------------------------------------
-Type.IsString = function(a)
+System.Type.IsString = function(a)
 {
     return (typeof a === "string");
 };
 
 // --------------------------------------------------
-Type.IsNumber = function(a)
+System.Type.IsNumber = function(a)
 {
     return !isNaN(a);
 };
 
 // --------------------------------------------------
-Type.IsArray = function(a)
+System.Type.IsArray = function(a)
 {
     return (typeof a === "array");
 };
@@ -220,7 +225,7 @@ Assert.NotEquals = function(a, b)
 // --------------------------------------------------
 Assert.NotUndefined = function(value)
 {
-    if (Type.IsUndefined(value))
+    if (System.Type.IsUndefined(value))
     {
         Assert.ThrowError("value is undefined");
     }
@@ -242,12 +247,12 @@ Assert.NotEmpty = function(value)
 {
     Assert.NotNull(value);
 
-	if (Type.IsString(value) && value.length == 0)
+	if (System.Type.IsString(value) && value.length == 0)
 	{
 		throw Error("value is an empty string");
 	}
 	
-	else if (Type.IsArray(value) && value.length == 0)
+	else if (System.Type.IsArray(value) && value.length == 0)
 	{
         Assert.ThrowError("value is an empty array");
 	}
@@ -258,7 +263,7 @@ Assert.Number = function(value)
 {
     Assert.NotNull(value);
 
-    if (!Type.IsNumber(value))
+    if (!System.Type.IsNumber(value))
     {
         Assert.ThrowError("value is not a number");
     }
@@ -287,47 +292,84 @@ Assert.GreaterThanZero = function(value)
 };
 
 // --------------------------------------------------
-//                  DOM EXTENSIONS
+//                  DOM NAMESPACE
 // --------------------------------------------------
 
-Span = function() {};
-Button = function() {};
-Select = function() {};
+System.DOM = function() {};
 
 // --------------------------------------------------
-Span.Create = function(id, text, styleClass)
+//                  DOM ELEMENT OBJECT
+// --------------------------------------------------
+
+System.DOM.Element = System.Object.SubClass();
+
+System.DOM.Element.prototype.__Initialize = function(parent, tag, id)
 {
-    var span = document.createElement("span");
-    span.id = id;
-    span.innerHTML = text;
+    Assert.NotUndefined(parent);
+    this.__domElementParent = parent;
+    this.__domElement = document.createElement(tag);
+    this.__domElement.id = id;
+    this.__domElementParent.attachChild(this.__domElement);
+};
 
-    if (typeof styleClass != "undefined" && styleClass != null)
+System.DOM.Element.GetId = function()
+{
+    return this.__domElement.id;
+};
+
+System.DOM.Element.prototype.Dispose = function()
+{
+    if (this.__domElement)
     {
-        span.className = styleClass;
+        this.__domElementParent.removeChild(this.__domElement);
     }
-
-    return span;
 };
 
 // --------------------------------------------------
-Button.Create = function(id, value, styleClass, onClickCallback)
+//                  SPAN OBJECT
+// --------------------------------------------------
+
+System.DOM.Span = System.DOM.Element.SubClass();
+
+System.DOM.Span.prototype.__Constructor = function(parent, text, styleClass)
 {
-    var button = document.createElement("input");
-    button.id = id;
-    button.type = "button";
-    button.value = value;
-    button.onclick = onClickCallback;
+    this.__Initialize(parent, "span", id);
+    this.__domElement.innerHTML = text;
 
-    if (typeof styleClass != "undefined" && styleClass != null)
+    if (!System.Type.IsUndefined(styleClass) && styleClass != null)
     {
-        button.className = styleClass;
+        this.__domElement.className = styleClass;
     }
-
-    return button;
 };
 
-// --------------------------------------------------
-Select.Create = function(id, styleClass, list)
+System.DOM.Span.prototype.GetText = function()
+{
+    return this.__domElement.innerHTML;
+};
+
+/*
+
+System.DOM.Button = System.Object.Element.SubClass();
+
+ System.DOM.Button.Create = function(id, value, styleClass, onClickCallback)
+ {
+ var button = document.createElement("input");
+ button.id = id;
+ button.type = "button";
+ button.value = value;
+ button.onclick = onClickCallback;
+
+ if (typeof styleClass != "undefined" && styleClass != null)
+ {
+ button.className = styleClass;
+ }
+
+ return button;
+ };
+
+System.DOM.Select = System.Object.Element.SubClass();
+
+System.DOM.Select.Create = function(id, styleClass, list)
 {
     var select = document.createElement("select");
 
@@ -346,8 +388,7 @@ Select.Create = function(id, styleClass, list)
     return select;
 };
 
-// --------------------------------------------------
-Select.AddOptions = function(select, list)
+System.DOM.Select.AddOptions = function(select, list)
 {
     for (var i = 0; i < list.GetSize(); i++)
     {
@@ -355,4 +396,4 @@ Select.AddOptions = function(select, list)
         option.text = list.Get(i);
         select.add(option);
     }
-};
+};*/
