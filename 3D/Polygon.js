@@ -1,7 +1,7 @@
-Polygon = System.Object.SubClass();
+var Polygon = System.Object.SubClass();
 
 Polygon.prototype.__Constructor = function (vertices) {
-    Assert.GreaterThan(vertices.length, 2);
+    System.Assert.GreaterThan(vertices.length, 2);
     this.__vertices = vertices;
     this.__normal = null;
     this.__ComputeNormal();

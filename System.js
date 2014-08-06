@@ -2,101 +2,80 @@
 //              INHERITANCE MECHANISM
 // --------------------------------------------------
 
-Function.prototype.SubClass = function()
-{
-	function Class()
-	{
-		if (!(this instanceof Class))
-		{
+Function.prototype.SubClass = function () {
+    function Class() {
+        if (!(this instanceof Class)) {
             throw("Constructor called without \"new\"");
-		}
-	
-		if ("__Constructor" in this)
-		{
-			this.__Constructor.apply(this, arguments);
-		}
-	}
-	Function.prototype.SubClass.NonConstructor.prototype = this.prototype;
-	Class.prototype = new Function.prototype.SubClass.NonConstructor();
-	return Class;
+        }
+
+        if ("__Constructor" in this) {
+            this.__Constructor.apply(this, arguments);
+        }
+    }
+
+    Function.prototype.SubClass.NonConstructor.prototype = this.prototype;
+    Class.prototype = new Function.prototype.SubClass.NonConstructor();
+    return Class;
+};
+
+Function.prototype.SubClass.NonConstructor = function () {
 };
 
 // --------------------------------------------------
-Function.prototype.SubClass.NonConstructor = function() {};
+//                      SYSTEM
+// --------------------------------------------------
 
-// --------------------------------------------------
-//                  SYSTEM NAMESPACE
-// --------------------------------------------------
-System = function() {};
+var System = function () {
+};
 
-// --------------------------------------------------
-System.RegisterEventListener = function(eventName, callback)
-{
-    if (typeof window === "undefined")
-    {
+System.RegisterEventListener = function (eventName, callback) {
+    if (window === undefined) {
         return;
     }
 
-    if (window.attachEvent)
-    {
+    if (window.attachEvent) {
         window.attachEvent(eventName, callback);
     }
-    else if (window.addEventListener)
-    {
+    else if (window.addEventListener) {
         window.addEventListener(eventName, callback);
     }
-    else
-    {
+    else {
         throw("Don't know how to register event");
     }
 };
 
-// --------------------------------------------------
-System.AddAnimationCallback = function(callback)
-{
-    if (typeof window === "undefined")
-    {
+System.AddAnimationCallback = function (callback) {
+    if (window === undefined) {
         return;
     }
 
-    if (window.requestAnimationFrame)
-    {
+    if (window.requestAnimationFrame) {
         window.requestAnimationFrame(callback);
     }
-    else if (window.webkitRequestAnimationFrame)
-    {
+    else if (window.webkitRequestAnimationFrame) {
         window.webkitRequestAnimationFrame(callback);
     }
-    else if (window.mozRequestAnimationFrame)
-    {
+    else if (window.mozRequestAnimationFrame) {
         window.mozRequestAnimationFrame(callback);
     }
-    else if (window.oRequestAnimationFrame)
-    {
+    else if (window.oRequestAnimationFrame) {
         window.oRequestAnimationFrame(callback);
     }
-    else
-    {
+    else {
         window.setTimeout(callback, 1000 / 60);
     }
 };
 
-// --------------------------------------------------
-System.Print = function(message)
-{
-    if (!(typeof window === "undefined"))
-    {
+System.Print = function (message) {
+    if (!(window === undefined)) {
         window.alert(message);
     }
-    else if (!(typeof console === "undefined"))
-    {
+    else if (!(console === undefined)) {
         console.log(message);
     }
 };
 
-// --------------------------------------------------
-System.Now = function()
-{
+System.Now = function () {
     return new Date().getTime();
 };
 
@@ -104,252 +83,151 @@ System.Now = function()
 //                  OBJECT CLASS
 // --------------------------------------------------
 
-System.Object = function() {};
+System.Object = function () {
+};
 
-System.Object.prototype.toString = function()
-{
-    if (this.ToString)
-    {
+System.Object.prototype.toString = function () {
+    if (this.ToString) {
         return this.ToString();
     }
-    else
-    {
+    else {
         return "[object Object]";
     }
 };
 
 // --------------------------------------------------
-//              UNIT TEST NAMESPACE
+//                  MATH FUNCTIONS
 // --------------------------------------------------
 
-System.UnitTest = function() {};
+System.Math = function () {
+};
 
-System.UnitTest.AddTestCase = function(testCase) {};
-
-// --------------------------------------------------
-//                  MATH NAMESPACE
-// --------------------------------------------------
-
-System.Math = function() {};
-
-System.Math.AP = function(n)
-{
+System.Math.AP = function (n) {
     return n * (1.0 + n) / 2.0;
 };
 
-System.Math.Sign = function(x) { return (x >= 0) ? 1 : -1; };
-
-// --------------------------------------------------
-//                  TYPE NAMESPACE
-// --------------------------------------------------
-System.Type = function() {};
-
-// --------------------------------------------------
-System.Type.IsUndefined = function(a)
-{
-    return (typeof a === "undefined");
+System.Math.Sign = function (x) {
+    return (x >= 0) ? 1 : -1;
 };
 
 // --------------------------------------------------
-System.Type.IsString = function(a)
-{
+//                  TYPE FUNCTIONS
+// --------------------------------------------------
+System.Type = function () {
+};
+
+System.Type.IsUndefined = function (a) {
+    return (a === undefined);
+};
+
+System.Type.IsString = function (a) {
     return (typeof a === "string");
 };
 
-// --------------------------------------------------
-System.Type.IsNumber = function(a)
-{
+System.Type.IsNumber = function (a) {
     return !isNaN(a);
 };
 
-// --------------------------------------------------
-System.Type.IsArray = function(a)
-{
+System.Type.IsArray = function (a) {
     return (typeof a === "array");
 };
 
 // --------------------------------------------------
 //                      ASSERTIONS
 // --------------------------------------------------
-Assert = function() {};
+System.Assert = function () {
+};
 
-Assert.ThrowError = function(message)
-{
+System.Assert.ThrowError = function (message) {
     throw Error(message + "\n(Stacktrace: " + printStackTrace().join("\n") + ")\n\n");
 };
 
-// --------------------------------------------------
-Assert.Equals = function(a, b)
-{
-    Assert.NotUndefined(a);
-    Assert.NotUndefined(b);
+System.Assert.Equals = function (a, b) {
+    System.Assert.NotUndefined(a);
+    System.Assert.NotUndefined(b);
 
     var result;
-    if (a.Equals)
-    {
+    if (a.Equals) {
         result = a.Equals(b);
     }
-    else
-    {
+    else {
         result = (a == b);
     }
 
-    if (!result)
-    {
-        Assert.ThrowError("actual: '" + a.toString() + "' / expected: '" + b.toString() +"'");
+    if (!result) {
+        System.Assert.ThrowError("actual: '" + a.toString() + "' / expected: '" + b.toString() + "'");
     }
 };
 
-// --------------------------------------------------
-Assert.NotEquals = function(a, b)
-{
-    Assert.NotUndefined(a);
-    Assert.NotUndefined(b);
+System.Assert.NotEquals = function (a, b) {
+    System.Assert.NotUndefined(a);
+    System.Assert.NotUndefined(b);
 
     var result;
-    if (a.Equals)
-    {
+    if (a.Equals) {
         result = a.Equals(b);
     }
-    else
-    {
+    else {
         result = (a == b);
     }
 
-    if (result)
-    {
-        Assert.ThrowError("actual: '" + a.toString() + "' / expected: !('" + b.toString() + "')");
+    if (result) {
+        System.Assert.ThrowError("actual: '" + a.toString() + "' / expected: !('" + b.toString() + "')");
     }
 };
 
-// --------------------------------------------------
-Assert.NotUndefined = function(value)
-{
-    if (System.Type.IsUndefined(value))
-    {
-        Assert.ThrowError("value is undefined");
+System.Assert.NotUndefined = function (value) {
+    if (System.Type.IsUndefined(value)) {
+        System.Assert.ThrowError("value is undefined");
     }
 };
 
-// --------------------------------------------------
-Assert.NotNull = function(value)
-{
-    Assert.NotUndefined(value);
+System.Assert.NotNull = function (value) {
+    System.Assert.NotUndefined(value);
 
-    if (value == null)
-    {
-        Assert.ThrowError("value is null");
+    if (value == null) {
+        System.Assert.ThrowError("value is null");
     }
 };
 
-// --------------------------------------------------
-Assert.NotEmpty = function(value)
-{
-    Assert.NotNull(value);
+System.Assert.NotEmpty = function (value) {
+    System.Assert.NotNull(value);
 
-	if (System.Type.IsString(value) && value.length == 0)
-	{
-		throw Error("value is an empty string");
-	}
-	
-	else if (System.Type.IsArray(value) && value.length == 0)
-	{
-        Assert.ThrowError("value is an empty array");
-	}
-};
-
-// --------------------------------------------------
-Assert.Number = function(value)
-{
-    Assert.NotNull(value);
-
-    if (!System.Type.IsNumber(value))
-    {
-        Assert.ThrowError("value is not a number");
+    if (System.Type.IsString(value) && value.length == 0) {
+        throw Error("value is an empty string");
+    }
+    else if (System.Type.IsArray(value) && value.length == 0) {
+        System.Assert.ThrowError("value is an empty array");
     }
 };
 
-// --------------------------------------------------
-Assert.GreaterThan = function(value, threshold)
-{
-    Assert.Number(value);
+System.Assert.Number = function (value) {
+    System.Assert.NotNull(value);
 
-    if (value <= threshold)
-    {
-        Assert.ThrowError("value is not greater than " + threshold);
+    if (!System.Type.IsNumber(value)) {
+        System.Assert.ThrowError("value is not a number");
+    }
+};
+
+System.Assert.GreaterThan = function (value, threshold) {
+    System.Assert.Number(value);
+
+    if (value <= threshold) {
+        System.Assert.ThrowError("value is not greater than " + threshold);
     }
 }
 
-// --------------------------------------------------
-Assert.GreaterThanZero = function(value)
-{
-    Assert.Number(value);
+System.Assert.GreaterThanZero = function (value) {
+    System.Assert.Number(value);
 
-	if (value <= 0)
-	{
-        Assert.ThrowError("value is not greater than zero");
-	}
-};
-
-// --------------------------------------------------
-//                  DOM NAMESPACE
-// --------------------------------------------------
-
-System.DOM = function() {};
-
-// --------------------------------------------------
-//                  DOM ELEMENT OBJECT
-// --------------------------------------------------
-
-System.DOM.Element = System.Object.SubClass();
-
-System.DOM.Element.prototype.__Initialize = function(parent, tag, id)
-{
-    Assert.NotUndefined(parent);
-    this.__domElementParent = parent;
-    this.__domElement = document.createElement(tag);
-    this.__domElement.id = id;
-    this.__domElementParent.attachChild(this.__domElement);
-};
-
-System.DOM.Element.GetId = function()
-{
-    return this.__domElement.id;
-};
-
-System.DOM.Element.prototype.Dispose = function()
-{
-    if (this.__domElement)
-    {
-        this.__domElementParent.removeChild(this.__domElement);
+    if (value <= 0) {
+        System.Assert.ThrowError("value is not greater than zero");
     }
-};
-
-// --------------------------------------------------
-//                  SPAN OBJECT
-// --------------------------------------------------
-
-System.DOM.Span = System.DOM.Element.SubClass();
-
-System.DOM.Span.prototype.__Constructor = function(parent, text, styleClass)
-{
-    this.__Initialize(parent, "span", id);
-    this.__domElement.innerHTML = text;
-
-    if (!System.Type.IsUndefined(styleClass) && styleClass != null)
-    {
-        this.__domElement.className = styleClass;
-    }
-};
-
-System.DOM.Span.prototype.GetText = function()
-{
-    return this.__domElement.innerHTML;
 };
 
 /*
 
-System.DOM.Button = System.Object.Element.SubClass();
+ System.DOM.Button = System.Object.Element.SubClass();
 
  System.DOM.Button.Create = function(id, value, styleClass, onClickCallback)
  {
@@ -367,33 +245,33 @@ System.DOM.Button = System.Object.Element.SubClass();
  return button;
  };
 
-System.DOM.Select = System.Object.Element.SubClass();
+ System.DOM.Select = System.Object.Element.SubClass();
 
-System.DOM.Select.Create = function(id, styleClass, list)
-{
-    var select = document.createElement("select");
+ System.DOM.Select.Create = function(id, styleClass, list)
+ {
+ var select = document.createElement("select");
 
-    select.id = id;
+ select.id = id;
 
-    if (typeof styleClass != "undefined" && styleClass != null)
-    {
-        select.className = styleClass;
-    }
+ if (typeof styleClass != "undefined" && styleClass != null)
+ {
+ select.className = styleClass;
+ }
 
-    if (typeof list != "undefined" && list != null)
-    {
-        Select.AddOptions(select, list);
-    }
+ if (typeof list != "undefined" && list != null)
+ {
+ Select.AddOptions(select, list);
+ }
 
-    return select;
-};
+ return select;
+ };
 
-System.DOM.Select.AddOptions = function(select, list)
-{
-    for (var i = 0; i < list.GetSize(); i++)
-    {
-        var option = document.createElement("option");
-        option.text = list.Get(i);
-        select.add(option);
-    }
-};*/
+ System.DOM.Select.AddOptions = function(select, list)
+ {
+ for (var i = 0; i < list.GetSize(); i++)
+ {
+ var option = document.createElement("option");
+ option.text = list.Get(i);
+ select.add(option);
+ }
+ };*/

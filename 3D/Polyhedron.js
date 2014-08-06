@@ -1,4 +1,4 @@
-Polyhedron = System.Object.SubClass();
+var Polyhedron = System.Object.SubClass();
 
 Polyhedron.prototype.__Constructor = function (data, size) {
     this.__data = data;
@@ -6,11 +6,10 @@ Polyhedron.prototype.__Constructor = function (data, size) {
     this.__vertices = [];
     this.__faces = [];
     this.__edges = [];
-    this.__polyhedronMesh = null;
-    this.__BuildPolyhedronMesh();
-    this.__polyhedronMesh.matrixAutoUpdate = false;
-    this.__polyhedronMesh.matrix = new THREE.Matrix4();
-    scene.add(this.__polyhedronMesh);
+    this.__mesh = null;
+    this.__BuildMesh();
+    this.__mesh.matrixAutoUpdate = false;
+    this.__mesh.matrix = new THREE.Matrix4();
 };
 
 Polyhedron.prototype.GetName = function () {
@@ -21,16 +20,20 @@ Polyhedron.prototype.GetSize = function () {
     return this.__size;
 };
 
+Polyhedron.prototype.GetMesh = function () {
+    return this.__mesh;
+};
+
 Polyhedron.prototype.GetX = function () {
-    return this.__polyhedronMesh.matrix.elements[12];
+    return this.__mesh.matrix.elements[12];
 };
 
 Polyhedron.prototype.GetY = function () {
-    return this.__polyhedronMesh.matrix.elements[13];
+    return this.__mesh.matrix.elements[13];
 };
 
 Polyhedron.prototype.GetZ = function () {
-    return this.__polyhedronMesh.matrix.elements[14];
+    return this.__mesh.matrix.elements[14];
 };
 
 Polyhedron.prototype.NumEdges = function () {
@@ -50,11 +53,6 @@ Polyhedron.prototype.Edge = function (i) {
 };
 
 Polyhedron.prototype.Face = function (i) {
-    // FIXME: remove this check
-    if (i >= this.__faces.length) {
-        alert("Face() -> i(" + i + ") >= this.__faces.length(" + this.__faces.length + ")");
-    }
-
     return this.__faces[i];
 };
 
@@ -63,29 +61,29 @@ Polyhedron.prototype.Vertex = function (i) {
 };
 
 Polyhedron.prototype.Transform = function (v) {
-    return v.clone().applyMatrix4(this.__polyhedronMesh.matrix);
+    return v.clone().applyMatrix4(this.__mesh.matrix);
 };
 
 Polyhedron.prototype.Rotate = function (v) {
-    var rotation = new THREE.Matrix4().extractRotation(this.__polyhedronMesh.matrix);
+    var rotation = new THREE.Matrix4().extractRotation(this.__mesh.matrix);
     return v.clone().applyMatrix4(rotation);
 };
 
 Polyhedron.prototype.SetPosition = function (x, y, z) {
-    this.__polyhedronMesh.matrix.setPosition(new THREE.Vector3(x, y, z));
-    this.__polyhedronMesh.matrixWorldNeedsUpdate = true;
+    this.__mesh.matrix.setPosition(new THREE.Vector3(x, y, z));
+    this.__mesh.matrixWorldNeedsUpdate = true;
 };
 
 Polyhedron.prototype.SetRotation = function (x, y, z) {
     var quaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(x / 180 * Math.PI, y / 180 * Math.PI, z / 180 * Math.PI, "XYZ"));
     var transform = new THREE.Matrix4();
     transform.makeRotationFromQuaternion(quaternion).setPosition(new THREE.Vector3(this.GetX(), this.GetY(), this.GetZ()));
-    this.__polyhedronMesh.matrix = transform;
-    this.__polyhedronMesh.matrixWorldNeedsUpdate = true;
+    this.__mesh.matrix = transform;
+    this.__mesh.matrixWorldNeedsUpdate = true;
 };
 
-Polyhedron.prototype.__BuildPolyhedronMesh = function () {
-    this.__polyhedronMesh = new THREE.Object3D();
+Polyhedron.prototype.__BuildMesh = function () {
+    this.__mesh = new THREE.Object3D();
 
     for (var i = 0; i < this.__data.vertex.length; i++) {
         this.__vertices.push(new THREE.Vector3(this.__data.vertex[i][0], this.__data.vertex[i][1], this.__data.vertex[i][2]).multiplyScalar(this.__size));
@@ -96,7 +94,7 @@ Polyhedron.prototype.__BuildPolyhedronMesh = function () {
         vertexMesh.translateX(this.__vertices[i].x);
         vertexMesh.translateY(this.__vertices[i].y);
         vertexMesh.translateZ(this.__vertices[i].z);
-        this.__polyhedronMesh.add(vertexMesh);
+        this.__mesh.add(vertexMesh);
     }
 
     var edgeMaterial = new THREE.MeshBasicMaterial({color: 0x666666});
@@ -112,7 +110,7 @@ Polyhedron.prototype.__BuildPolyhedronMesh = function () {
         this.__edges.push(edge);
     }
     var edgeMesh = new THREE.Mesh(edgesMeshes, edgeMaterial);
-    this.__polyhedronMesh.add(edgeMesh);
+    this.__mesh.add(edgeMesh);
 
     var faceMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: THREE.FaceColors, side: THREE.FrontSide, transparent: false, opacity: 0.8 });
     var faceColors =
@@ -148,16 +146,12 @@ Polyhedron.prototype.__BuildPolyhedronMesh = function () {
 
     var faces = new THREE.Mesh(geometry, faceMaterial);
     faces.scale.multiplyScalar(1.01);
-    this.__polyhedronMesh.add(faces);
+    this.__mesh.add(faces);
 
     var interiorMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors, side: THREE.BackSide});
 
     var interiorFaces = new THREE.Mesh(geometry, interiorMaterial);
     interiorFaces.scale.multiplyScalar(0.99);
-    this.__polyhedronMesh.add(interiorFaces);
+    this.__mesh.add(interiorFaces);
 };
 
-Polyhedron.prototype.Dispose = function () {
-    scene.remove(this.__polyhedronMesh);
-    this.__data = null;
-};

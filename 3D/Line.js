@@ -1,4 +1,4 @@
-Line = System.Object.SubClass();
+var Line = System.Object.SubClass();
 
 Line.prototype.__Constructor = function (start, end) {
     this.__start = start;
