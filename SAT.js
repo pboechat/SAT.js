@@ -224,48 +224,50 @@ SAT.Box.prototype.__Constructor = function (width, height, depth) {
     SAT.Box.parent.__Constructor.call(this, vertices, faces, edges);
 };
 
-SAT.BuildMesh = function (shape, color) {
+SAT.BuildMesh = function (shape, params) {
     var mesh = new THREE.Object3D();
 
-    for (var i = 0; i < shape.VertexCount(); i++) {
-        var vertexMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 6), new THREE.MeshBasicMaterial({color: 0x333333}));
-        var vertex = shape.Vertex(i);
-        vertexMesh.translateX(vertex.x);
-        vertexMesh.translateY(vertex.y);
-        vertexMesh.translateZ(vertex.z);
-        mesh.add(vertexMesh);
+    if (!System.Type.IsUndefined(params) && !System.Type.IsUndefined(params.decoration) && params.decoration) {
+        for (var i = 0; i < shape.VertexCount(); i++) {
+            var vertexMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 6), new THREE.MeshBasicMaterial({color: 0x333333}));
+            var vertex = shape.Vertex(i);
+            vertexMesh.translateX(vertex.x);
+            vertexMesh.translateY(vertex.y);
+            vertexMesh.translateZ(vertex.z);
+            mesh.add(vertexMesh);
+        }
+
+        var edgesGeometry = new THREE.Geometry();
+        for (var i = 0; i < shape.EdgeCount(); i++) {
+            var edge = shape.Edge(i);
+            var direction = edge.GetDirection();
+            var arrowHelper = new THREE.ArrowHelper(direction, edge.GetStart(), edge.Length() * 0.5);
+            edgesGeometry.merge(new THREE.CylinderGeometry(0.02, 0.02, edge.Length(), 8, 4),
+                new THREE.Matrix4().makeRotationFromQuaternion(arrowHelper.quaternion).setPosition(new THREE.Vector3().addVectors(edge.GetStart(), direction.multiplyScalar(edge.Length() * 0.5))), 0);
+        }
+        mesh.add(new THREE.Mesh(edgesGeometry, new THREE.MeshBasicMaterial({color: 0x666666})));
     }
 
-    var edgesGeometry = new THREE.Geometry();
-    for (var i = 0; i < shape.EdgeCount(); i++) {
-        var edge = shape.Edge(i);
-        var direction = edge.GetDirection();
-        var arrowHelper = new THREE.ArrowHelper(direction, edge.GetStart(), edge.Length() * 0.5);
-        edgesGeometry.merge(new THREE.CylinderGeometry(0.02, 0.02, edge.Length(), 8, 4),
-            new THREE.Matrix4().makeRotationFromQuaternion(arrowHelper.quaternion).setPosition(new THREE.Vector3().addVectors(edge.GetStart(), direction.multiplyScalar(edge.Length() * 0.5))), 0);
-    }
-    mesh.add(new THREE.Mesh(edgesGeometry, new THREE.MeshBasicMaterial({color: 0x666666})));
-
-    var geometry = new THREE.Geometry();
-    geometry.vertices = shape.Vertices();
+    var facesGeometry = new THREE.Geometry();
+    facesGeometry.vertices = shape.Vertices();
     var c = 0;
     for (var i = 0; i < shape.FaceCount(); i++) {
         var face = shape.Face(i);
         for (var j = 0; j < face.VertexCount() - 2; j++) {
-            geometry.faces[c] = new THREE.Face3(face.VertexIndex(0), face.VertexIndex(j + 1), face.VertexIndex(j + 2));
-            geometry.faces[c].color = color;
+            facesGeometry.faces[c] = new THREE.Face3(face.VertexIndex(0), face.VertexIndex(j + 1), face.VertexIndex(j + 2));
+            facesGeometry.faces[c].color = params.color;
             c++;
         }
     }
 
-    geometry.computeFaceNormals();
-    geometry.computeVertexNormals();
+    facesGeometry.computeFaceNormals();
+    facesGeometry.computeVertexNormals();
 
-    var facesMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors, side: THREE.FrontSide, transparent: false, opacity: 0.8}));
+    var facesMesh = new THREE.Mesh(facesGeometry, new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors, side: THREE.FrontSide, transparent: false, opacity: 0.8}));
     facesMesh.scale.multiplyScalar(1.01);
     mesh.add(facesMesh);
 
-    var interiorFacesMesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors, side: THREE.BackSide}));
+    var interiorFacesMesh = new THREE.Mesh(facesGeometry, new THREE.MeshBasicMaterial({color: 0xffffff, vertexColors: THREE.FaceColors, side: THREE.BackSide}));
     interiorFacesMesh.scale.multiplyScalar(0.99);
     mesh.add(interiorFacesMesh);
 
@@ -276,6 +278,17 @@ SAT.BuildMesh = function (shape, color) {
     return mesh;
 };
 
-SAT.BoxBoxCollision = function () {
+SAT.CheckGenericPolyhedraCollision = function (a, b) {
     return false;
+};
+
+SAT.CheckBoxBoxCollision = function (a, b) {
+    return false;
+};
+
+SAT.CheckCollision = function (a, b) {
+    if (a instanceof SAT.Box && b instanceof SAT.Box) {
+        return SAT.CheckBoxBoxCollision(a, b);
+    }
+    return SAT.CheckGenericPolyhedraCollision(a, b);
 };
