@@ -286,13 +286,13 @@ SAT3DApplication.prototype.InteractiveCollisionDetection = function (step) {
 
     if (step < numFaces) {
         var face = C0.Face(index);
-        var P = C0.Transform(face.Centroid());
+        var P = C0.TransformVertex(face.Centroid());
         var D = C0.Rotate(face.Normal());
-        var arrowEnd = C0.Transform(new THREE.Vector3().addVectors(face.Centroid(), face.Normal()));
+        var arrowEnd = C0.TransformVertex(new THREE.Vector3().addVectors(face.Centroid(), face.Normal()));
         this.CreateArrowMesh(P, arrowEnd, 0.01, D_LENGTH, new THREE.MeshBasicMaterial({color: 0xffffff}));
         var sameSide = true;
         for (var i = 0; i < C1.NumVertices(); i++) {
-            var V = C1.Transform(C1.Vertex(i));
+            var V = C1.TransformVertex(C1.Vertex(i));
             var S = new THREE.Vector3().subVectors(V, P);
             var color;
             if (D.dot(S) > 0) {
@@ -316,21 +316,21 @@ SAT3DApplication.prototype.InteractiveCollisionDetection = function (step) {
         var e1 = C0.Edge(i);
         var e2 = C1.Edge(j);
 
-        this.CreateArrowMesh(C0.Transform(e1.GetStart()), C0.Transform(e1.GetEnd()), E_WIDTH, e1.Length(), new THREE.MeshBasicMaterial({color: 0xff00ff}));
-        this.CreateArrowMesh(C1.Transform(e2.GetStart()), C1.Transform(e2.GetEnd()), E_WIDTH, e2.Length(), new THREE.MeshBasicMaterial({color: 0x00ffff}));
+        this.CreateArrowMesh(C0.TransformVertex(e1.GetStart()), C0.TransformVertex(e1.GetEnd()), E_WIDTH, e1.Length(), new THREE.MeshBasicMaterial({color: 0xff00ff}));
+        this.CreateArrowMesh(C1.TransformVertex(e2.GetStart()), C1.TransformVertex(e2.GetEnd()), E_WIDTH, e2.Length(), new THREE.MeshBasicMaterial({color: 0x00ffff}));
         //CreateArrowMesh(new THREE.Vector3(), new THREE.Vector3().subVectors(e1.GetEnd(), e1.GetStart()), 0.01, 1, new THREE.MeshBasicMaterial({color: 0xff00ff}));
         //CreateArrowMesh(new THREE.Vector3(), new THREE.Vector3().subVectors(e2.GetEnd(), e2.GetStart()), 0.01, 1, new THREE.MeshBasicMaterial({color: 0x00ffff}));
 
         var D = new THREE.Vector3().crossVectors(C0.Rotate(e1.GetDirection()), C1.Rotate(e2.GetDirection())).normalize();
         //CreateArrowMesh(new THREE.Vector3(), D, 0.01, 1, new THREE.MeshBasicMaterial({color: 0xffff00}));
 
-        var P = C0.Transform(e1.GetStart());
+        var P = C0.TransformVertex(e1.GetStart());
         var arrowEnd = new THREE.Vector3().addVectors(P, D);
         this.CreateArrowMesh(P, arrowEnd, E_WIDTH, D_LENGTH, new THREE.MeshBasicMaterial({color: 0xffff00}));
 
         var side0 = null;
         for (var i = 0; i < C0.NumVertices(); i++) {
-            var V = C0.Transform(C0.Vertex(i));
+            var V = C0.TransformVertex(C0.Vertex(i));
             var S = new THREE.Vector3().subVectors(V, P);
             var color;
             var dotProduct = D.dot(S);
@@ -350,7 +350,7 @@ SAT3DApplication.prototype.InteractiveCollisionDetection = function (step) {
 
         var side1 = null;
         for (var i = 0; i < C1.NumVertices(); i++) {
-            var V = C1.Transform(C1.Vertex(i));
+            var V = C1.TransformVertex(C1.Vertex(i));
             var S = new THREE.Vector3().subVectors(V, P);
             var color;
             var dotProduct = D.dot(S);

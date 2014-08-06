@@ -60,7 +60,7 @@ Polyhedron.prototype.Vertex = function (i) {
     return this.__vertices[i];
 };
 
-Polyhedron.prototype.Transform = function (v) {
+Polyhedron.prototype.TransformVertex = function (v) {
     return v.clone().applyMatrix4(this.__mesh.matrix);
 };
 

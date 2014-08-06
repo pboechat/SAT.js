@@ -81,7 +81,7 @@ System.Now = function () {
 };
 
 // --------------------------------------------------
-//                  OBJECT CLASS
+//                 OBJECT SUPERCLASS
 // --------------------------------------------------
 
 System.Object = function () {
@@ -131,6 +131,21 @@ System.Type.IsNumber = function (a) {
 
 System.Type.IsArray = function (a) {
     return (typeof a === "array");
+};
+
+// --------------------------------------------------
+//                  ARRAY FUNCTIONS
+// --------------------------------------------------
+
+System.Array = function () {
+};
+
+System.Array.Range = function(min, max) {
+    var array = [];
+    for (var i = min; i < max; i++) {
+        array.push(i);
+    }
+    return array;
 };
 
 // --------------------------------------------------

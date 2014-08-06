@@ -1,43 +1,108 @@
 var SAT = function () {
 };
 
-SAT.Line = System.Object.SubClass();
+SAT.Edge = System.Object.SubClass();
 
-SAT.Line.prototype.__Constructor = function (start, end) {
-    this.__start = start;
-    this.__end = end;
-    this.__direction = new THREE.Vector3().subVectors(this.__end, this.__start);
-    this.__length = this.__direction.length();
-    this.__direction.normalize();
+SAT.Edge.prototype.__Constructor = function (shape, startIndex, endIndex) {
+    this.__shape = shape;
+    this.__startIndex = startIndex;
+    this.__endIndex = endIndex;
 };
 
-SAT.Line.prototype.GetDirection = function () {
-    return this.__direction.clone();
+SAT.Edge.prototype.StartIndex = function () {
+    return this.__startIndex;
 };
 
-SAT.Line.prototype.GetStart = function () {
-    return this.__start.clone();
+SAT.Edge.prototype.EndIndex = function () {
+    return this.__endIndex;
 };
 
-SAT.Line.prototype.GetEnd = function () {
-    return this.__end.clone();
+SAT.Edge.prototype.ToLine = function () {
+    return new SAT.Line(this.__shape.Vertex(this.__startIndex), this.__shape.Vertex(this.__endIndex));
 };
 
-SAT.Line.prototype.Length = function () {
-    return this.__length;
+
+SAT.Edge.prototype.Clone = function () {
+    return new SAT.Edge(this.__shape, this.__startIndex, this.__endIndex);
 };
 
-SAT.Line.prototype.Clone = function () {
-    return new SAT.Line(this.__start, this.__end);
+SAT.Face = System.Object.SubClass();
+
+SAT.Face.prototype.__Constructor = function (shape, verticesIndices) {
+    this.__shape = shape;
+    this.__verticesIndices = verticesIndices;
+};
+
+SAT.Face.prototype.VertexIndex = function (i) {
+    return this.__verticesIndices[i];
+};
+
+SAT.Face.prototype.VerticesIndices = function () {
+    return this.__verticesIndices.concat([]);
+};
+
+SAT.Face.prototype.VertexCount = function () {
+    return this.__verticesIndices.length;
+}
+
+SAT.Face.prototype.ToPolygon = function () {
+    var vertices = [];
+    for (var i = 0; i < this.__verticesIndices.length; i++) {
+        vertices.push(this.__shape.Vertex(this.__verticesIndices[i]));
+    }
+    return new SAT.Polygon(vertices);
+}
+
+SAT.Face.prototype.Clone = function () {
+    return new SAT.Face(this.__shape, this.__verticesIndices.concat([]));
 };
 
 SAT.Shape = System.Object.SubClass();
 
 SAT.Shape.prototype.__Constructor = function (vertices, faces, edges) {
-    this.__vertices = vertices;
-    this.__faces = faces;
-    this.__edges = edges;
+    this.__vertices = ((System.Type.IsUndefined(vertices)) ? null : vertices);
+    this.__faces = ((System.Type.IsUndefined(faces)) ? null : faces);
+    this.__edges = ((System.Type.IsUndefined(edges)) ? null : edges);
     this.__matrix = new THREE.Matrix4();
+};
+
+SAT.Shape.prototype.Consolidate = function (shape) {
+    var vertices = [];
+    for (var i = 0; i < this.__vertices.length; i++) {
+        vertices.push(this.__vertices[i].clone().applyMatrix4(this.__matrix));
+    }
+    var faces = [];
+    for (var i = 0; i < this.__faces.length; i++) {
+        faces.push(new SAT.Face(shape, this.__faces[i].VerticesIndices()));
+    }
+    var edges = [];
+    for (var i = 0; i < this.__edges.length; i++) {
+        edges.push(new SAT.Edge(shape, this.__edges[i].StartIndex(), this.__edges[i].EndIndex()));
+    }
+    shape.__vertices = vertices;
+    shape.__faces = faces;
+    shape.__edges = edges;
+    return shape;
+};
+
+SAT.Shape.prototype.ConsolidateSelf = function () {
+    this.Consolidate(this);
+    this.__matrix = new THREE.Matrix4();
+    return this;
+};
+
+SAT.Shape.prototype.ApplyMatrix4 = function (matrix) {
+    /*var vertices = [];
+    for (var i = 0; i < this.__vertices.length; i++) {
+        vertices.push(this.__vertices[i].clone().applyMatrix4(matrix));
+    }
+    this.__vertices = vertices;*/
+    this.__matrix = new THREE.Matrix4().multiplyMatrices(matrix, this.__matrix);
+    return this;
+};
+
+SAT.Shape.prototype.Clone = function () {
+    throw new Error("Method non implemented.");
 };
 
 SAT.Shape.prototype.X = function () {
@@ -88,10 +153,6 @@ SAT.Shape.prototype.Vertex = function (i) {
     return this.__vertices[i].clone();
 };
 
-SAT.Shape.prototype.Transform = function (vertex) {
-    return vertex.clone().applyMatrix4(this.__matrix);
-};
-
 SAT.Shape.prototype.GetTransform = function () {
     return this.__matrix;
 };
@@ -112,15 +173,40 @@ SAT.Shape.prototype.SetRotation = function (x, y, z) {
     this.__matrix = transform;
 };
 
+SAT.Line = SAT.Shape.SubClass();
+
+SAT.Line.prototype.__Constructor = function (start, end) {
+    this.__direction = new THREE.Vector3().subVectors(end, start);
+    this.__length = this.__direction.length();
+    this.__direction.normalize();
+    SAT.Line.parent.__Constructor.call(this, [start, end], [], [new SAT.Edge(this, 0, 1)]);
+};
+
+SAT.Line.prototype.GetDirection = function () {
+    return this.__direction.clone();
+};
+
+SAT.Line.prototype.Start = function () {
+    return this.__vertices[0];
+};
+
+SAT.Line.prototype.End = function () {
+    return this.__vertices[1];
+};
+
+SAT.Line.prototype.Length = function () {
+    return this.__length;
+};
+
 SAT.Polygon = SAT.Shape.SubClass();
 
 SAT.Polygon.prototype.__Constructor = function (vertices) {
     System.Assert.GreaterThan(vertices.length, 2);
     var edges = [];
     for (var i = vertices.length - 1, j = 0; j < vertices.length; i = j, j++) {
-        edges.push(new SAT.Line(vertices[i], vertices[j]));
+        edges.push(new SAT.Edge(this, i, j));
     }
-    SAT.Polygon.parent.__Constructor.call(this, vertices, [this], edges)
+    SAT.Polygon.parent.__Constructor.call(this, vertices, [new SAT.Face(this, System.Array.Range(0, vertices.length))], edges)
     this.__normal = null;
     this.__centroid = null;
     this.ComputeNormal();
@@ -175,29 +261,13 @@ SAT.Polygon.ToGlobalCoordinates = function (e1, e2, origin, vertex) {
             origin.z + e1.z * vertex.x + e2.z * vertex.y);
 };
 
-SAT.Face = SAT.Polygon.SubClass();
-
-SAT.Face.prototype.__Constructor = function (verticesSet, verticesIndices) {
-    this.__verticesSet = verticesSet;
-    this.__verticesIndices = verticesIndices;
-    var vertices = [];
-    for (var i = 0; i < this.__verticesIndices.length; i++) {
-        vertices.push(this.__verticesSet[this.__verticesIndices[i]]);
-    }
-    SAT.Face.parent.__Constructor.call(this, vertices);
-};
-
-SAT.Face.prototype.VertexIndex = function (i) {
-    return this.__verticesIndices[i];
-};
-
-SAT.Face.prototype.Clone = function () {
-    return new SAT.Face(this.__verticesSet, this.__verticesIndices);
-};
-
 SAT.Box = SAT.Shape.SubClass();
 
 SAT.Box.prototype.__Constructor = function (width, height, depth) {
+    if (System.Type.IsUndefined(width) || System.Type.IsUndefined(height) || System.Type.IsUndefined(depth)) {
+        SAT.Box.parent.__Constructor.call(this);
+        return;
+    }
     this.__width = width;
     this.__height = height;
     this.__depth = depth;
@@ -205,32 +275,69 @@ SAT.Box.prototype.__Constructor = function (width, height, depth) {
     var vertices = [
         new THREE.Vector3(-halfExtents.x, halfExtents.y, halfExtents.z), new THREE.Vector3(-halfExtents.x, -halfExtents.y, halfExtents.z),
         new THREE.Vector3(halfExtents.x, -halfExtents.y, halfExtents.z), new THREE.Vector3(halfExtents.x, halfExtents.y, halfExtents.z),
-        new THREE.Vector3(halfExtents.x, halfExtents.y, -halfExtents.z), new THREE.Vector3(halfExtents.z, -halfExtents.y, -halfExtents.z),
+        new THREE.Vector3(halfExtents.x, halfExtents.y, -halfExtents.z), new THREE.Vector3(halfExtents.x, -halfExtents.y, -halfExtents.z),
         new THREE.Vector3(-halfExtents.x, -halfExtents.y, -halfExtents.z), new THREE.Vector3(-halfExtents.x, halfExtents.y, -halfExtents.z)
     ];
     var faces = [
-        new SAT.Face(vertices, [0, 1, 2, 3]),  // front
-        new SAT.Face(vertices, [4, 5, 6, 7]),  // back
-        new SAT.Face(vertices, [3, 2, 5, 4]),  // right
-        new SAT.Face(vertices, [7, 6, 1, 0]),  // left
-        new SAT.Face(vertices, [7, 0, 3, 4]),  // top
-        new SAT.Face(vertices, [5, 2, 1, 6])   // bottom
+        new SAT.Face(this, [0, 1, 2, 3]),  // front
+        new SAT.Face(this, [4, 5, 6, 7]),  // back
+        new SAT.Face(this, [3, 2, 5, 4]),  // right
+        new SAT.Face(this, [7, 6, 1, 0]),  // left
+        new SAT.Face(this, [7, 0, 3, 4]),  // top
+        new SAT.Face(this, [5, 2, 1, 6])   // bottom
     ];
     var edges = [
-        new SAT.Line(vertices[0], vertices[1]), new SAT.Line(vertices[1], vertices[2]), new SAT.Line(vertices[2], vertices[3]), new SAT.Line(vertices[3], vertices[0]),
-        new SAT.Line(vertices[4], vertices[5]), new SAT.Line(vertices[5], vertices[6]), new SAT.Line(vertices[6], vertices[7]), new SAT.Line(vertices[7], vertices[4]),
-        new SAT.Line(vertices[3], vertices[4]), new SAT.Line(vertices[2], vertices[5]), new SAT.Line(vertices[0], vertices[7]), new SAT.Line(vertices[1], vertices[6])
+        new SAT.Edge(this, 0, 1), new SAT.Edge(this, 1, 2), new SAT.Edge(this, 2, 3), new SAT.Edge(this, 3, 0),
+        new SAT.Edge(this, 4, 5), new SAT.Edge(this, 5, 6), new SAT.Edge(this, 6, 7), new SAT.Edge(this, 7, 4),
+        new SAT.Edge(this, 3, 4), new SAT.Edge(this, 2, 5), new SAT.Edge(this, 0, 7), new SAT.Edge(this, 1, 6)
     ];
     SAT.Box.parent.__Constructor.call(this, vertices, faces, edges);
 };
 
-SAT.BuildMesh = function (shape, params) {
+SAT.Box.prototype.GetWidth = function() {
+    return this.__width;
+};
+
+SAT.Box.prototype.GetHeight = function() {
+    return this.__height;
+};
+
+SAT.Box.prototype.GetDepth = function() {
+    return this.__depth;
+};
+
+SAT.Box.prototype.Clone = function () {
+    var clone = new SAT.Box();
+    clone.__width = this.__width;
+    clone.__height = this.__height;
+    clone.__depth = this.__depth;
+    clone.__matrix = this.__matrix;
+    var vertices = [];
+    for (var i = 0; i < this.__vertices.length; i++) {
+        vertices.push(this.__vertices[i].clone());
+    }
+    var faces = [];
+    for (var i = 0; i < this.__faces.length; i++) {
+        faces.push(new SAT.Face(clone, this.__faces[i].VerticesIndices()));
+    }
+    var edges = [];
+    for (var i = 0; i < this.__edges.length; i++) {
+        edges.push(new SAT.Edge(clone, this.__edges[i].StartIndex(), this.__edges[i].EndIndex()));
+    }
+    clone.__vertices = vertices;
+    clone.__faces = faces;
+    clone.__edges = edges;
+    return clone;
+};
+
+SAT.BuildMesh = function (shape0, params) {
+    var shape1 = shape0.Consolidate(new SAT.Shape());
     var mesh = new THREE.Object3D();
 
     if (!System.Type.IsUndefined(params) && !System.Type.IsUndefined(params.decoration) && params.decoration) {
-        for (var i = 0; i < shape.VertexCount(); i++) {
+        for (var i = 0; i < shape1.VertexCount(); i++) {
             var vertexMesh = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 6), new THREE.MeshBasicMaterial({color: 0x333333}));
-            var vertex = shape.Vertex(i);
+            var vertex = shape1.Vertex(i);
             vertexMesh.translateX(vertex.x);
             vertexMesh.translateY(vertex.y);
             vertexMesh.translateZ(vertex.z);
@@ -238,23 +345,26 @@ SAT.BuildMesh = function (shape, params) {
         }
 
         var edgesGeometry = new THREE.Geometry();
-        for (var i = 0; i < shape.EdgeCount(); i++) {
-            var edge = shape.Edge(i);
+        for (var i = 0; i < shape1.EdgeCount(); i++) {
+            var edge = shape1.Edge(i).ToLine();
             var direction = edge.GetDirection();
-            var arrowHelper = new THREE.ArrowHelper(direction, edge.GetStart(), edge.Length() * 0.5);
+            var arrowHelper = new THREE.ArrowHelper(direction, edge.Start(), edge.Length() * 0.5);
             edgesGeometry.merge(new THREE.CylinderGeometry(0.02, 0.02, edge.Length(), 8, 4),
-                new THREE.Matrix4().makeRotationFromQuaternion(arrowHelper.quaternion).setPosition(new THREE.Vector3().addVectors(edge.GetStart(), direction.multiplyScalar(edge.Length() * 0.5))), 0);
+                new THREE.Matrix4().makeRotationFromQuaternion(arrowHelper.quaternion).setPosition(new THREE.Vector3().addVectors(edge.Start(), direction.multiplyScalar(edge.Length() * 0.5))), 0);
         }
         mesh.add(new THREE.Mesh(edgesGeometry, new THREE.MeshBasicMaterial({color: 0x666666})));
     }
 
     var facesGeometry = new THREE.Geometry();
-    facesGeometry.vertices = shape.Vertices();
+    facesGeometry.vertices = shape1.Vertices();
     var c = 0;
-    for (var i = 0; i < shape.FaceCount(); i++) {
-        var face = shape.Face(i);
+    for (var i = 0; i < shape1.FaceCount(); i++) {
+        var face = shape1.Face(i);
         for (var j = 0; j < face.VertexCount() - 2; j++) {
-            facesGeometry.faces[c] = new THREE.Face3(face.VertexIndex(0), face.VertexIndex(j + 1), face.VertexIndex(j + 2));
+            var v1 = face.VertexIndex(0);
+            var v2 = face.VertexIndex(j + 1);
+            var v3 = face.VertexIndex(j + 2);
+            facesGeometry.faces[c] = new THREE.Face3(v1, v2, v3);
             facesGeometry.faces[c].color = params.color;
             c++;
         }
@@ -272,18 +382,87 @@ SAT.BuildMesh = function (shape, params) {
     mesh.add(interiorFacesMesh);
 
     mesh.matrixAutoUpdate = false;
-    mesh.matrix = shape.GetTransform();
+    mesh.matrix = shape1.GetTransform();
     mesh.matrixWorldNeedsUpdate = true;
 
     return mesh;
 };
 
-SAT.CheckGenericPolyhedraCollision = function (a, b) {
-    return false;
+SAT.WhichSide = function (V, D, P) {
+    var positive = 0, negative = 0;
+    for (var i = 0; i < V.length; i++) {
+        var t = D.dot(new THREE.Vector3().subVectors(V[i], P));
+        if (t > 0) positive++; else if (t < 0) negative++;
+        if (positive && negative) return 0;
+    }
+    return (positive) ? 1 : -1;
 };
 
-SAT.CheckBoxBoxCollision = function (a, b) {
-    return false;
+SAT.CheckGenericPolyhedraCollision = function (a0, b0) {
+    var a1 = a0.Consolidate(new SAT.Shape());
+    var b1 = b0.Consolidate(new SAT.Shape());
+
+    for (var i = 0; i < a1.FaceCount(); i++) {
+        var face = a1.Face(i).ToPolygon();
+        if (SAT.WhichSide(b1.Vertices(), face.Normal(), face.Vertex(0)) > 0) {
+            return false;
+        }
+    }
+
+    for (var i = 0; i < b1.FaceCount(); i++) {
+        var face = b1.Face(i).ToPolygon();
+        if (SAT.WhichSide(a1.Vertices(), face.Normal(), face.Vertex(0)) > 0) {
+            return false;
+        }
+    }
+
+    for (var i = 0; i < a1.EdgeCount(); i++) {
+        var e0 = a1.Edge(i).ToLine();
+        for (var j = 0; j < b1.EdgeCount(); j++) {
+            var e1 = b1.Edge(j).ToLine();
+            var D = new THREE.Vector3().crossVectors(e0.GetDirection(), e1.GetDirection()).normalize();
+            var same0;
+            if ((same0 = SAT.WhichSide(a1.Vertices(), D, e0.Start())) == 0) {
+                continue;
+            }
+            var same1;
+            if ((same1 = SAT.WhichSide(b1.Vertices(), D, e0.Start())) == 0) {
+                continue;
+            }
+            if (same0 * same1 < 0) {
+                return false;
+            }
+        }
+    }
+    return true;
+};
+
+SAT.IntersectsAABBAtOrigin = function(p1, p2, aabbHalfExtents) {
+    return ((p1.x - aabbHalfExtents.x) * (p2.x - aabbHalfExtents.x)) < 0 ||
+        ((aabbHalfExtents.x - p1.x) * (aabbHalfExtents.x - p2.x)) < 0 ||
+        ((p1.y - aabbHalfExtents.y) * (p2.y - aabbHalfExtents.y)) < 0 ||
+        ((aabbHalfExtents.y - p1.y) * (aabbHalfExtents.y - p2.y)) < 0 ||
+        ((p1.z - aabbHalfExtents.z) * (p2.z - aabbHalfExtents.z)) < 0 ||
+        ((aabbHalfExtents.z - p1.z) * (aabbHalfExtents.z - p2.z)) < 0;
+};
+
+SAT.CheckBoxBoxCollision = function (a0, b0) {
+    var inverseModel = new THREE.Matrix4().getInverse(a0.GetTransform());
+    var b1 = b0.Clone().ApplyMatrix4(inverseModel);
+    b1.ConsolidateSelf();
+    var aabbHalfExtents = new THREE.Vector3(b0.GetWidth(), b0.GetHeight(), b0.GetDepth()).multiplyScalar(0.5);
+    return SAT.IntersectsAABBAtOrigin(b1.Vertex(0), b1.Vertex(1), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(1), b1.Vertex(2), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(2), b1.Vertex(3), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(3), b1.Vertex(0), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(4), b1.Vertex(5), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(5), b1.Vertex(6), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(6), b1.Vertex(7), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(7), b1.Vertex(4), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(0), b1.Vertex(7), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(1), b1.Vertex(6), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(3), b1.Vertex(4), aabbHalfExtents) ||
+        SAT.IntersectsAABBAtOrigin(b1.Vertex(2), b1.Vertex(5), aabbHalfExtents);
 };
 
 SAT.CheckCollision = function (a, b) {
