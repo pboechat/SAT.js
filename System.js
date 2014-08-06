@@ -13,12 +13,13 @@ Function.prototype.SubClass = function () {
         }
     }
 
-    Function.prototype.SubClass.NonConstructor.prototype = this.prototype;
-    Class.prototype = new Function.prototype.SubClass.NonConstructor();
+    Function.prototype.SubClass.Base.prototype = this.prototype;
+    Class.prototype = new Function.prototype.SubClass.Base();
+    Class.parent = this.prototype;
     return Class;
 };
 
-Function.prototype.SubClass.NonConstructor = function () {
+Function.prototype.SubClass.Base = function () {
 };
 
 // --------------------------------------------------

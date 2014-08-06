@@ -9,7 +9,7 @@ Polygon.prototype.__Constructor = function (vertices) {
     this.__e2 = new THREE.Vector3().crossVectors(this.__normal, this.__e1);
     this.__origin = vertices[0];
     this.__centroid = null;
-    this.__ComputeCentroid();
+    this.ComputeCentroid();
 };
 
 Polygon.prototype.__ComputeNormal = function () {
@@ -22,7 +22,7 @@ Polygon.prototype.__ComputeNormal = function () {
     this.__normal.normalize();
 };
 
-Polygon.prototype.__ComputeCentroid = function () {
+Polygon.prototype.ComputeCentroid = function () {
     var centroid = new THREE.Vector2();
     var area = 0;
     for (var i = this.__vertices.length - 1, j = 0; j < this.__vertices.length; i = j, j++) {
