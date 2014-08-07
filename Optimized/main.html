@@ -8,25 +8,71 @@
     <script type="text/javascript" src="../System.WebGL.js"></script>
     <script type="text/javascript" src="../SAT.js"></script>
     <script type="text/javascript">
+        var MOVE_SPEED = 0.1;
+        var ROTATE_STEP = 1;
+
         var SATOptimizedApplication = System.WebGL.Application.SubClass();
+
+        SATOptimizedApplication.prototype.__Constructor = function() {
+            this.__box1 = new SAT.Box(1, 1, 1);
+            this.__box1.SetPosition(0.0, 0.0, 0.0);
+            this.__box2 = new SAT.Box(2, 2, 2);
+            this.__box2.SetPosition(2.0, 0.0, 2.0);
+            this.__box1Mesh = null;
+            this.__box2Mesh = null;
+            this.__boxes = [this.__box1, this.__box2];
+            this.__selectedBoxIndex = 0;
+        };
+
         var application = new SATOptimizedApplication();
+
         application.SetOnKeyUpListener(function (e) {
+            if (e.keyCode == 65) {
+                this.__boxes[this.__selectedBoxIndex].Translate(new THREE.Vector3(-MOVE_SPEED, 0, 0));
+            } else if (e.keyCode == 68) {
+                this.__boxes[this.__selectedBoxIndex].Translate(new THREE.Vector3(MOVE_SPEED, 0, 0));
+            } else if (e.keyCode == 83) {
+                this.__boxes[this.__selectedBoxIndex].Translate(new THREE.Vector3(0, -MOVE_SPEED, 0));
+            } else if (e.keyCode == 87) {
+                this.__boxes[this.__selectedBoxIndex].Translate(new THREE.Vector3(0, MOVE_SPEED, 0));
+            } else if (e.keyCode == 69) {
+                this.__boxes[this.__selectedBoxIndex].Translate(new THREE.Vector3(0, 0, MOVE_SPEED));
+            } else if (e.keyCode == 81) {
+                this.__boxes[this.__selectedBoxIndex].Translate(new THREE.Vector3(0, 0, -MOVE_SPEED));
+            } else if (e.keyCode == 32) {
+                this.__boxes[this.__selectedBoxIndex].Rotate(0, 0, ROTATE_STEP / 180.0 * Math.PI);
+            } else if (e.keyCode == 13) {
+                this.__selectedBoxIndex = ++this.__selectedBoxIndex % this.__boxes.length;
+            }
         });
-        application.SetOnLoadListener(function () {
-            var box1 = new SAT.Box(1, 1, 1);
-            box1.SetPosition(0.0, 0.0, 0.0);
-            var box2 = new SAT.Box(2, 2, 2);
-            box2.SetPosition(1.4, 0.0, 0.0);
+
+        application.SetOnUpdateListener(function() {
             var color;
-            if (SAT.CheckCollision(box1, box2)) {
+            if (SAT.CheckCollision(this.__box1, this.__box2)) {
                 color = new THREE.Color(0xff0000);
             }
             else {
                 color = new THREE.Color(0x0000ff);
             }
-            this.__scene.add(SAT.BuildMesh(box1, { color: color, decoration: true }));
-            this.__scene.add(SAT.BuildMesh(box2, { color: color, decoration: true }));
+
+            if (this.__box1Mesh != null) {
+                this.__scene.remove(this.__box1Mesh);
+            }
+
+            this.__box1Mesh = SAT.BuildMesh(this.__box1, { color: color, decoration: true })
+            this.__scene.add(this.__box1Mesh);
+
+            if (this.__box2Mesh != null) {
+                this.__scene.remove(this.__box2Mesh);
+            }
+
+            this.__box2Mesh = SAT.BuildMesh(this.__box2, { color: color, decoration: true })
+            this.__scene.add(this.__box2Mesh);
         });
+
+        application.SetOnLoadListener(function () {
+        });
+
         application.RunFullscreen();
     </script>
 </head>

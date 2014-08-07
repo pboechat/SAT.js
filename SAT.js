@@ -93,10 +93,10 @@ SAT.Shape.prototype.ConsolidateSelf = function () {
 
 SAT.Shape.prototype.ApplyMatrix4 = function (matrix) {
     /*var vertices = [];
-    for (var i = 0; i < this.__vertices.length; i++) {
-        vertices.push(this.__vertices[i].clone().applyMatrix4(matrix));
-    }
-    this.__vertices = vertices;*/
+     for (var i = 0; i < this.__vertices.length; i++) {
+     vertices.push(this.__vertices[i].clone().applyMatrix4(matrix));
+     }
+     this.__vertices = vertices;*/
     this.__matrix = new THREE.Matrix4().multiplyMatrices(matrix, this.__matrix);
     return this;
 };
@@ -154,12 +154,22 @@ SAT.Shape.prototype.Vertex = function (i) {
 };
 
 SAT.Shape.prototype.GetTransform = function () {
-    return this.__matrix;
+    /*var transform = this.__matrix.clone();
+     transform.elements[0] = this.__width;
+     transform.elements[5] = this.__height;
+     transform.elements[10] = this.__depth;
+     return transform;*/
+    return this.__matrix.clone();
 };
 
-SAT.Shape.prototype.Rotate = function (vertex) {
-    var rotation = new THREE.Matrix4().extractRotation(this.__matrix);
-    return vertex.clone().applyMatrix4(rotation);
+SAT.Shape.prototype.Translate = function (vertex) {
+    this.__matrix.elements[12] += vertex.x;
+    this.__matrix.elements[13] += vertex.y;
+    this.__matrix.elements[14] += vertex.z;
+};
+
+SAT.Shape.prototype.Rotate = function (x, y, z) {
+    this.__matrix = new THREE.Matrix4().multiplyMatrices(this.__matrix, new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(x, y, z, "XYZ")));
 };
 
 SAT.Shape.prototype.SetPosition = function (x, y, z) {
@@ -294,15 +304,15 @@ SAT.Box.prototype.__Constructor = function (width, height, depth) {
     SAT.Box.parent.__Constructor.call(this, vertices, faces, edges);
 };
 
-SAT.Box.prototype.GetWidth = function() {
+SAT.Box.prototype.GetWidth = function () {
     return this.__width;
 };
 
-SAT.Box.prototype.GetHeight = function() {
+SAT.Box.prototype.GetHeight = function () {
     return this.__height;
 };
 
-SAT.Box.prototype.GetDepth = function() {
+SAT.Box.prototype.GetDepth = function () {
     return this.__depth;
 };
 
@@ -382,7 +392,7 @@ SAT.BuildMesh = function (shape0, params) {
     mesh.add(interiorFacesMesh);
 
     mesh.matrixAutoUpdate = false;
-    mesh.matrix = shape1.GetTransform();
+    mesh.matrix = shape1.__matrix;
     mesh.matrixWorldNeedsUpdate = true;
 
     return mesh;
@@ -437,32 +447,34 @@ SAT.CheckGenericPolyhedraCollision = function (a0, b0) {
     return true;
 };
 
-SAT.IntersectsAABBAtOrigin = function(p1, p2, aabbHalfExtents) {
-    return ((p1.x - aabbHalfExtents.x) * (p2.x - aabbHalfExtents.x)) < 0 ||
-        ((aabbHalfExtents.x - p1.x) * (aabbHalfExtents.x - p2.x)) < 0 ||
-        ((p1.y - aabbHalfExtents.y) * (p2.y - aabbHalfExtents.y)) < 0 ||
-        ((aabbHalfExtents.y - p1.y) * (aabbHalfExtents.y - p2.y)) < 0 ||
-        ((p1.z - aabbHalfExtents.z) * (p2.z - aabbHalfExtents.z)) < 0 ||
-        ((aabbHalfExtents.z - p1.z) * (aabbHalfExtents.z - p2.z)) < 0;
+SAT.InverseModel = function (matrix) {
+    // M = | R  T |
+    //     | 0  1 |
+    // inv(M) = | R'    R' * T' |
+    //          | 0     1       |
+    var R1 = new THREE.Matrix3(matrix.elements[0], matrix.elements[1], matrix.elements[2],
+        matrix.elements[4], matrix.elements[5], matrix.elements[6],
+        matrix.elements[8], matrix.elements[9], matrix.elements[10]);
+
+    var T1 = new THREE.Vector3(-matrix.elements[12], -matrix.elements[13], -matrix.elements[14]).applyMatrix3(R1);
+
+    return new THREE.Matrix4(R1.elements[0], R1.elements[3], R1.elements[6], T1.x,
+        R1.elements[1], R1.elements[4], R1.elements[7], T1.y,
+        R1.elements[2], R1.elements[5], R1.elements[8], T1.z,
+        0.0, 0.0, 0.0, 1.0);
 };
 
+
 SAT.CheckBoxBoxCollision = function (a0, b0) {
-    var inverseModel = new THREE.Matrix4().getInverse(a0.GetTransform());
+    var inverseModel = SAT.InverseModel(a0.GetTransform());
     var b1 = b0.Clone().ApplyMatrix4(inverseModel);
     b1.ConsolidateSelf();
-    var aabbHalfExtents = new THREE.Vector3(b0.GetWidth(), b0.GetHeight(), b0.GetDepth()).multiplyScalar(0.5);
-    return SAT.IntersectsAABBAtOrigin(b1.Vertex(0), b1.Vertex(1), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(1), b1.Vertex(2), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(2), b1.Vertex(3), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(3), b1.Vertex(0), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(4), b1.Vertex(5), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(5), b1.Vertex(6), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(6), b1.Vertex(7), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(7), b1.Vertex(4), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(0), b1.Vertex(7), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(1), b1.Vertex(6), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(3), b1.Vertex(4), aabbHalfExtents) ||
-        SAT.IntersectsAABBAtOrigin(b1.Vertex(2), b1.Vertex(5), aabbHalfExtents);
+
+    var vertices = b1.Vertices();
+    var e = new THREE.Vector3(a0.GetWidth(), a0.GetHeight(), a0.GetDepth()).multiplyScalar(0.5);
+
+
+
 };
 
 SAT.CheckCollision = function (a, b) {

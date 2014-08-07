@@ -17,6 +17,7 @@ System.WebGL.Application.prototype.__Constructor = function () {
     this.__height = 0;
     this.__onKeyUpListener = null;
     this.__onLoadListener = null;
+    this.__onUpdateListener = null;
 };
 
 System.WebGL.Application.prototype.RunWindowed = function (width, height) {
@@ -38,6 +39,10 @@ System.WebGL.Application.prototype.SetOnKeyUpListener = function (onKeyUpListene
 
 System.WebGL.Application.prototype.SetOnLoadListener = function (onLoadListener) {
     this.__onLoadListener = onLoadListener;
+};
+
+System.WebGL.Application.prototype.SetOnUpdateListener = function (onUpdateListener) {
+    this.__onUpdateListener = onUpdateListener;
 };
 
 System.WebGL.Application.prototype.OnKeyUp = function (e) {
@@ -84,4 +89,7 @@ System.WebGL.Application.prototype.__MainLoop = function () {
     System.AddAnimationCallback(this.__MainLoop.bind(this));
     this.__renderer.render(this.__scene, this.__camera);
     this.__controls.update();
+    if (this.__onUpdateListener != null) {
+        this.__onUpdateListener.call(this);
+    }
 };
