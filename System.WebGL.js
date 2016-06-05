@@ -16,6 +16,7 @@ System.WebGL.Application.prototype.__Constructor = function () {
     this.__width = 0;
     this.__height = 0;
     this.__onKeyUpListener = null;
+    this.__onKeyDownListener = null;
     this.__onLoadListener = null;
     this.__onUpdateListener = null;
 };
@@ -37,6 +38,10 @@ System.WebGL.Application.prototype.SetOnKeyUpListener = function (onKeyUpListene
     this.__onKeyUpListener = onKeyUpListener;
 };
 
+System.WebGL.Application.prototype.SetOnKeyDownListener = function (onKeyDownListener) {
+    this.__onKeyDownListener = onKeyDownListener;
+};
+
 System.WebGL.Application.prototype.SetOnLoadListener = function (onLoadListener) {
     this.__onLoadListener = onLoadListener;
 };
@@ -50,6 +55,13 @@ System.WebGL.Application.prototype.OnKeyUp = function (e) {
         return;
     }
     this.__onKeyUpListener.apply(this, [e || event]);
+};
+
+System.WebGL.Application.prototype.OnKeyDown = function (e) {
+    if (this.__onKeyDownListener == null) {
+        return;
+    }
+    this.__onKeyDownListener.apply(this, [e || event]);
 };
 
 System.WebGL.Application.prototype.OnResize = function (e) {
@@ -68,6 +80,7 @@ System.WebGL.Application.prototype.OnLoad = function () {
     var body = document.getElementsByTagName("body")[0];
     body.style.margin = 0;
     body.onkeyup = this.OnKeyUp.bind(this);
+    body.onkeydown = this.OnKeyDown.bind(this);
     this.__scene = new THREE.Scene();
     var width = (this.__fullscreen) ? window.innerWidth - 4 : this.__width;
     var height = (this.__fullscreen) ? window.innerHeight - 4 : this.__height;

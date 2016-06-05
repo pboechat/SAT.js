@@ -26,7 +26,7 @@
 
         var application = new SATOptimizedApplication();
 
-        application.SetOnKeyUpListener(function (e) {
+        application.SetOnKeyDownListener(function (e) {
             if (e.keyCode == 65) {
                 this.__boxes[this.__selectedBoxIndex].Translate(new THREE.Vector3(-MOVE_SPEED, 0, 0));
             } else if (e.keyCode == 68) {

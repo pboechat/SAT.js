@@ -473,8 +473,7 @@ SAT.CheckBoxBoxCollision = function (a0, b0) {
     var vertices = b1.Vertices();
     var e = new THREE.Vector3(a0.GetWidth(), a0.GetHeight(), a0.GetDepth()).multiplyScalar(0.5);
 
-
-
+    // TODO:
 };
 
 SAT.CheckCollision = function (a, b) {
