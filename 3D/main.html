@@ -33,6 +33,7 @@ MainGUI.prototype.__Constructor = function () {
     positionFolder.add(this, "x", -10.0, 10.0);
     positionFolder.add(this, "y", -10.0, 10.0);
     positionFolder.add(this, "z", -10.0, 10.0);
+    positionFolder.open();
     this.__gui.add(this, "CreatePolyhedron");
     this.__gui.add(this, "ClearScene");
 };
@@ -51,8 +52,7 @@ MainGUI.prototype.CreatePolyhedron = function () {
         return;
     }
 
-    var polyhedron = application.AddPolyhedron(this.__selectedPolyhedronData, this.size);
-    polyhedron.SetPosition(this.x, this.y, this.z);
+    var polyhedron = application.AddPolyhedron(this.__selectedPolyhedronData, this.size, this.x, this.y, this.z);
 };
 
 MainGUI.prototype.Polyhedron_OnChange = function (value) {
@@ -68,30 +68,25 @@ var PolyhedronControlsDialog = System.Object.SubClass();
 PolyhedronControlsDialog.prototype.__Constructor = function (polyhedron) {
     this.name = polyhedron.GetName();
     this.size = polyhedron.GetSize();
-    this.tx = polyhedron.GetX() + 0.01;
-    this.ty = polyhedron.GetY() + 0.01;
-    this.tz = polyhedron.GetZ() + 0.01;
-    this.rx = 0.01;
-    this.ry = 0.01;
-    this.rz = 0.01;
+    this.tx = polyhedron.GetX();
+    this.ty = polyhedron.GetY();
+    this.tz = polyhedron.GetZ();
+    this.rx = 0;
+    this.ry = 0;
+    this.rz = 0;
     this.__polyhedron = polyhedron;
     this.__gui = new dat.GUI();
     this.__gui.add(this, "name");
     this.__gui.add(this, "size");
     var positionFolder = this.__gui.addFolder("position");
-    var controller = positionFolder.add(this, "tx", -10.0, 10.0);
-    controller.onChange(this.XPositionField_OnChange.bind(this));
-    controller = positionFolder.add(this, "ty", -10.0, 10.0);
-    controller.onChange(this.YPositionField_OnChange.bind(this));
-    controller = positionFolder.add(this, "tz", -10.0, 10.0);
-    controller.onChange(this.ZPositionField_OnChange.bind(this));
+    positionFolder.add(this, "tx").min(-10.0).max(10.0).step(0.01).onChange(this.XPositionField_OnChange.bind(this));
+    positionFolder.add(this, "ty").min(-10.0).max(10.0).step(0.01).onChange(this.YPositionField_OnChange.bind(this));
+    positionFolder.add(this, "tz").min(-10.0).max(10.0).step(0.01).onChange(this.ZPositionField_OnChange.bind(this));
+    positionFolder.open();
     var rotationFolder = this.__gui.addFolder("rotation");
-    controller = rotationFolder.add(this, "rx", 0.0, 360.0);
-    controller.onChange(this.XRotationField_OnChange.bind(this));
-    controller = rotationFolder.add(this, "ry", 0.0, 360.0);
-    controller.onChange(this.YRotationField_OnChange.bind(this));
-    controller = rotationFolder.add(this, "rz", 0.0, 360.0);
-    controller.onChange(this.ZRotationField_OnChange.bind(this));
+    rotationFolder.add(this, "rx").min(0).max(360).onChange(this.XRotationField_OnChange.bind(this));
+    rotationFolder.add(this, "ry").min(0).max(360).onChange(this.YRotationField_OnChange.bind(this));
+    rotationFolder.add(this, "rz").min(0).max(360).onChange(this.ZRotationField_OnChange.bind(this));
 };
 
 PolyhedronControlsDialog.prototype.XPositionField_OnChange = function (value) {
@@ -130,14 +125,16 @@ PolyhedronControlsDialog.prototype.Dispose = function () {
 
 CollisionDetectionDialog = System.Object.SubClass();
 
-CollisionDetectionDialog.prototype.__Constructor = function (numSteps, collisionDetectionCallback) {
-    this.veredict = "unknown";
+CollisionDetectionDialog.prototype.__Constructor = function (numSteps, collisionDetectionCallback, resetCallback) {
+    this.verdict = "unknown";
     this.step = 0;
     this.__numSteps = numSteps;
     this.__collisionDetectionCallback = collisionDetectionCallback;
+    this.__resetCallback = resetCallback;
     this.__gui = new dat.GUI();
-    this.__veredictFieldController = this.__gui.add(this, "veredict");
+    this.__verdictFieldController = this.__gui.add(this, "verdict");
     this.__stepFieldController = this.__gui.add(this, "step", 0, this.__numSteps - 1);
+    this.__gui.add(this, "Reset");
     this.__stepFieldController.onChange(this.StepField_OnChange.bind(this));
 };
 
@@ -146,19 +143,34 @@ CollisionDetectionDialog.prototype.StepField_OnChange = function (value) {
     this.__collisionDetectionCallback(this.step);
 };
 
-CollisionDetectionDialog.prototype.SetCollisionDetectionVeredict = function (collided) {
-    this.veredict = collided;
-    this.__veredictFieldController.updateDisplay();
+CollisionDetectionDialog.prototype.SetCollisionDetectionVerdict = function (collided) {
+    this.verdict = collided;
+    this.__verdictFieldController.updateDisplay();
 };
 
 CollisionDetectionDialog.prototype.Dispose = function () {
     this.__gui.destroy();
 };
 
+CollisionDetectionDialog.prototype.Reset = function() {
+    this.verdict = "unknown";
+    this.step = 0;
+    this.__verdictFieldController.updateDisplay();
+    this.__resetCallback();
+}
+
 CollisionDetectionDialog.prototype.RunInteractiveCollisionDetectionAndIncrementStep = function () {
-    this.__collisionDetectionCallback(this.step);
-    this.step = ++this.step % this.__numSteps;
-    this.__stepFieldController.updateDisplay();
+    if (this.step == this.__numSteps)
+    {
+        if (this.verdict == "unknown")
+            this.SetCollisionDetectionVerdict("colliding");
+    }
+    else if (this.verdict == "unknown")
+    {
+        this.__collisionDetectionCallback(this.step);
+        this.step++;
+        this.__stepFieldController.updateDisplay();
+    }
 };
 
 var SAT3DApplication = System.WebGL.Application.SubClass();
@@ -186,8 +198,9 @@ SAT3DApplication.prototype.GetSupportedPolyhedraNames = function () {
     return supportedPolyhedraNames;
 };
 
-SAT3DApplication.prototype.AddPolyhedron = function (data, size) {
+SAT3DApplication.prototype.AddPolyhedron = function (data, size, x, y ,z) {
     var polyhedron = new Polyhedron(data, size);
+    polyhedron.SetPosition(x, y, z);
     this.__scene.add(polyhedron.GetMesh());
     this.__polyhedronList.push(polyhedron);
     this.__polyhedronControlsDialogs.push(new PolyhedronControlsDialog(polyhedron));
@@ -307,7 +320,7 @@ SAT3DApplication.prototype.InteractiveCollisionDetection = function (step) {
         this.CreateDividingPlane(P, arrowEnd);
 
         if (sameSide) {
-            this.__collisionDetectionDialog.SetCollisionDetectionVeredict("non-colliding");
+            this.__collisionDetectionDialog.SetCollisionDetectionVerdict("non-colliding");
         }
     }
     else {
@@ -370,7 +383,7 @@ SAT3DApplication.prototype.InteractiveCollisionDetection = function (step) {
         this.CreateDividingPlane(P, arrowEnd);
 
         if (side0 * side1 < 0) {
-            this.__collisionDetectionDialog.SetCollisionDetectionVeredict("non-colliding");
+            this.__collisionDetectionDialog.SetCollisionDetectionVerdict("non-colliding");
         }
     }
 };
@@ -385,7 +398,7 @@ application.SetOnKeyUpListener(function (e) {
 
         if (this.__collisionDetectionDialog == null) {
             var numSteps = this.__polyhedronList[0].NumFaces() + this.__polyhedronList[1].NumFaces() + this.__polyhedronList[0].NumEdges() * this.__polyhedronList[1].NumEdges();
-            this.__collisionDetectionDialog = new CollisionDetectionDialog(numSteps, this.InteractiveCollisionDetection.bind(this));
+            this.__collisionDetectionDialog = new CollisionDetectionDialog(numSteps, this.InteractiveCollisionDetection.bind(this), this.ClearTemporaryMeshes.bind(this));
         }
 
         this.__collisionDetectionDialog.RunInteractiveCollisionDetectionAndIncrementStep();

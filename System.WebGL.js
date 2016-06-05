@@ -56,8 +56,8 @@ System.WebGL.Application.prototype.OnResize = function (e) {
     if (!this.__fullscreen) {
         return;
     }
-    var width = window.innerWidth;
-    var height = window.innerHeight;
+    var width = window.innerWidth - 4;
+    var height = window.innerHeight - 4;
     var aspect = width / height;
     this.__camera.aspect = aspect;
     this.__camera.updateProjectionMatrix();
@@ -69,8 +69,8 @@ System.WebGL.Application.prototype.OnLoad = function () {
     body.style.margin = 0;
     body.onkeyup = this.OnKeyUp.bind(this);
     this.__scene = new THREE.Scene();
-    var width = (this.__fullscreen) ? window.innerWidth : this.__width;
-    var height = (this.__fullscreen) ? window.innerHeight : this.__height;
+    var width = (this.__fullscreen) ? window.innerWidth - 4 : this.__width;
+    var height = (this.__fullscreen) ? window.innerHeight - 4 : this.__height;
     var aspect = width / height;
     this.__camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
     this.__camera.position.set(0, 1.5, 6);
