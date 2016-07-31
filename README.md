@@ -82,3 +82,9 @@ Faces must reference vertices in counter-clockwise order.
 ### Demo
 
 Examine the SAT algorithm step-by-step [here](http://pedroboechat.com/SAT.js/3D/main.html).
+
+----------
+
+### Video
+
+[!Video(http://www.pedroboechat.com/images/SATjs-video-thumbnail.png)](https://www.youtube.com/watch?v=djKUDMbGMM4)
