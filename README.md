@@ -87,4 +87,4 @@ Examine the SAT algorithm step-by-step [here](http://pedroboechat.com/SAT.js/3D/
 
 ### Video
 
-[!Video(http://www.pedroboechat.com/images/SATjs-video-thumbnail.png)](https://www.youtube.com/watch?v=djKUDMbGMM4)
+[![Video](http://www.pedroboechat.com/images/SATjs-video-thumbnail.png)](https://www.youtube.com/watch?v=djKUDMbGMM4)
