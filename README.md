@@ -19,7 +19,7 @@ Add three.js and SAT.js to your page:
 
 #### Polygons
 
-Wrap your 2D vertices around with the *SAT.Polygon* class:
+With your 2D vertices, construct a *SAT.Polygon*:
 
     var polyA = new SAT.Polygon([new THREE.Vector2(-0.5, -0.5), 
     new THREE.Vector2(0.5, -0.5),
@@ -28,11 +28,11 @@ Wrap your 2D vertices around with the *SAT.Polygon* class:
     ]);
     var polyB = new SAT.Polygon(verticesB);
 
-Notice that vertices *must* be in *counter-clockwise* order.
+Notice that the vertices *must* be in *counter-clockwise* order.
 
 #### Polyhedra
 
-With vertices, edges and faces of your polyhedron, build a *SAT.Shape* instance:
+With the 3D vertices, edges and faces of your polyhedron, construct a *SAT.Shape*:
 
     // 1x1x1 cube centered in origin
     var polyA = new SAT.Shape(
@@ -69,7 +69,7 @@ With vertices, edges and faces of your polyhedron, build a *SAT.Shape* instance:
     ]);
     var polyB = new SAT.Shape(verticesB, edgesB, facesB);
 
-Faces must reference vertices in counter-clockwise order.
+Your faces *must* reference your vertices in *counter-clockwise* order.
 
 #### Collision Checking
 
